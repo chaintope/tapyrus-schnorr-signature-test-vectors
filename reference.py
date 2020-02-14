@@ -73,6 +73,25 @@ def is_square(x):
 def has_square_y(P):
     return not is_infinity(P) and is_square(y(P))
 
+def jacobi(x):
+    assert(x > 0)
+    n = p
+    t = 1
+    while x != 0:
+        while x % 2 == 0:
+            x /= 2
+            r = n % 8
+            if r == 3 or r == 5:
+                t = -t
+        x, n = n, x
+        if x % 4 == n % 4 == 3:
+            t = -t
+        x %= n
+    if n == 1:
+        return t
+    else:
+        return 0
+
 def pubkey_gen(seckey):
     x = int_from_bytes(seckey)
     if not (1 <= x <= n - 1):
