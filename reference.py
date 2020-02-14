@@ -99,14 +99,13 @@ def pubkey_gen(seckey):
     P = point_mul(G, x)
     return bytes_from_point(P)
 
-def schnorr_sign(msg, seckey0):
+def schnorr_sign(msg, seckey):
     if len(msg) != 32:
         raise ValueError('The message must be a 32-byte array.')
-    seckey0 = int_from_bytes(seckey0)
-    if not (1 <= seckey0 <= n - 1):
+    seckey = int_from_bytes(seckey)
+    if not (1 <= seckey <= n - 1):
         raise ValueError('The secret key must be an integer in the range 1..n-1.')
-    P = point_mul(G, seckey0)
-    seckey = seckey0 if has_square_y(P) else n - seckey0
+    P = point_mul(G, seckey)
     k0 = int_from_bytes(tagged_hash("BIPSchnorrDerive", bytes_from_int(seckey) + msg)) % n
     if k0 == 0:
         raise RuntimeError('Failure. This happens only with negligible probability.')
