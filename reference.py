@@ -45,20 +45,24 @@ def point_mul(P, n):
         P = point_add(P, P)
     return R
 
-def bytes_from_int(x):
-    return x.to_bytes(32, byteorder="big")
+def bytes_from_int(x, size=32):
+    return x.to_bytes(size, byteorder="big")
 
 def bytes_from_point(P):
-    return bytes_from_int(x(P))
+    prefix = b'\x03' if y(P) % 2 == 1 else b'\x02'
+    return prefix + bytes_from_int(x(P))
 
 def point_from_bytes(b):
-    x = int_from_bytes(b)
+    assert(len(b) == 33 and (b[0] == 3 or b[0] == 2))
+    x = int_from_bytes(b[1:33])
+    odd = b[0]
     if x >= p:
         return None
     y_sq = (pow(x, 3, p) + 7) % p
-    y = pow(y_sq, (p + 1) // 4, p)
-    if pow(y, 2, p) != y_sq:
+    y0 = pow(y_sq, (p + 1) // 4, p)
+    if pow(y0, 2, p) != y_sq:
         return None
+    y = p - y0 if y0 % 2 == odd else y0
     return [x, y]
 
 def int_from_bytes(b):
@@ -112,13 +116,13 @@ def schnorr_sign(msg, seckey):
     R = point_mul(G, k0)
     k = n - k0 if not has_square_y(R) else k0
     e = int_from_bytes(tagged_hash("BIPSchnorr", bytes_from_point(R) + bytes_from_point(P) + msg)) % n
-    return bytes_from_point(R) + bytes_from_int((k + e * seckey) % n)
+    return bytes_from_int(x(R)) + bytes_from_int((k + e * seckey) % n)
 
 def schnorr_verify(msg, pubkey, sig):
     if len(msg) != 32:
         raise ValueError('The message must be a 32-byte array.')
-    if len(pubkey) != 32:
-        raise ValueError('The public key must be a 32-byte array.')
+    if len(pubkey) != 33:
+        raise ValueError('The public key must be a 33-byte array.')
     if len(sig) != 64:
         raise ValueError('The signature must be a 64-byte array.')
     P = point_from_bytes(pubkey)

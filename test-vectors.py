@@ -32,7 +32,7 @@ def vector2():
 
     # This signature vector would not verify if the implementer checked the
     # squareness of the X coordinate of R instead of the Y coordinate.
-    R = point_from_bytes(sig[0:32])
+    R = point_from_bytes(b'\x02' + sig[0:32])
     assert(not is_square(R[0]))
 
     return (seckey, pubkey_gen(seckey), msg, sig, "TRUE", None)
@@ -56,7 +56,7 @@ def insecure_schnorr_sign_fixed_nonce(msg, seckey, k0):
     R = point_mul(G, k0)
     k = n - k0 if not has_square_y(R) else k0
     e = int_from_bytes(tagged_hash("BIPSchnorr", bytes_from_point(R) + bytes_from_point(P) + msg)) % n
-    return bytes_from_point(R) + bytes_from_int((k + e * seckey) % n)
+    return bytes_from_int(x(R)) + bytes_from_int((k + e * seckey) % n)
 
 # Creates a singature with a small x(R) by using k = 1/2
 def vector4():
@@ -77,7 +77,7 @@ def vector5():
     msg = default_msg
     sig = schnorr_sign(msg, seckey)
 
-    pubkey = bytes_from_int(0xEEFDEA4CDB677750A420FEE807EACF21EB9898AE79B9768766E4FAA04A2D4A34)
+    pubkey = bytes_from_int(0x02EEFDEA4CDB677750A420FEE807EACF21EB9898AE79B9768766E4FAA04A2D4A34, size=33)
     assert(point_from_bytes(pubkey) is None)
 
     return (None, pubkey, msg, sig, "FALSE", "public key not on the curve")
@@ -110,8 +110,13 @@ def vector8():
 
 def bytes_from_point_inf0(P):
     if P == None:
-        return bytes_from_int(0)
-    return bytes_from_int(P[0])
+        return bytes_from_int(0, size=33)
+
+    prefix = b'\x03' if y(P) % 2 == 1 else b'\x02'
+    return prefix + bytes_from_int(x(P))
+
+def x_inf0(P):
+    return 0 if P == None else P[0]
 
 def vector9():
     seckey = default_seckey
@@ -120,9 +125,13 @@ def vector9():
     # Override bytes_from_point in schnorr_sign to allow creating a signature
     # with k = 0.
     k = 0
+
+    x_tmp = x.__code__
+    x.__code__ = x_inf0.__code__
     bytes_from_point_tmp = bytes_from_point.__code__
     bytes_from_point.__code__ = bytes_from_point_inf0.__code__
     sig = insecure_schnorr_sign_fixed_nonce(msg, seckey, k)
+    x.__code__ = x_tmp
     bytes_from_point.__code__ = bytes_from_point_tmp
 
     return (None, pubkey_gen(seckey), msg, sig, "FALSE", "sG - eP is infinite. Test fails in single verification if has_square_y(inf) is defined as true and x(inf) as 0")
@@ -139,9 +148,12 @@ def vector10():
     # Override bytes_from_point in schnorr_sign to allow creating a signature
     # with k = 0.
     k = 0
+    x_tmp = x.__code__
+    x.__code__ = x_inf0.__code__
     bytes_from_point_tmp = bytes_from_point.__code__
     bytes_from_point.__code__ = bytes_from_point_inf1.__code__
     sig = insecure_schnorr_sign_fixed_nonce(msg, seckey, k)
+    x.__code__ = x_tmp
     bytes_from_point.__code__ = bytes_from_point_tmp
 
     return (None, pubkey_gen(seckey), msg, sig, "FALSE", "sG - eP is infinite. Test fails in single verification if has_square_y(inf) is defined as true and x(inf) as 1")
@@ -156,7 +168,7 @@ def vector11():
 
     # Replace R's X coordinate with an X coordinate that's not on the curve
     x_not_on_curve = bytes_from_int(0x4A298DACAE57395A15D0795DDBFD1DCB564DA82B0F269BC70A74F8220429BA1D)
-    assert(point_from_bytes(x_not_on_curve) is None)
+    assert(point_from_bytes(b'\x02' + x_not_on_curve) is None)
     sig = x_not_on_curve + sig[32:64]
 
     return (None, pubkey_gen(seckey), msg, sig, "FALSE", "sig[0:32] is not an X coordinate on the curve")
@@ -200,11 +212,11 @@ def vector14():
     sig = schnorr_sign(msg, seckey)
 
     pubkey_int = p + 1
-    pubkey = bytes_from_int(pubkey_int)
+    pubkey = b'\x02' + bytes_from_int(pubkey_int)
     assert(point_from_bytes(pubkey) is None)
     # If an implementation would reduce a given public key modulo p then the
     # pubkey would be valid
-    assert(point_from_bytes(bytes_from_int(pubkey_int % p)) is not None)
+    assert(point_from_bytes(b'\x02' + bytes_from_int(pubkey_int % p)) is not None)
 
     return (None, pubkey, msg, sig, "FALSE", "public key is not a valid X coordinate because it exceeds the field size")
 
