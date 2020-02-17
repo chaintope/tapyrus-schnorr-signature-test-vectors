@@ -11,9 +11,8 @@ G = (0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798, 0x483AD
 
 # This implementation can be sped up by storing the midstate after hashing
 # tag_hash instead of rehashing it all the time.
-def tagged_hash(tag, msg):
-    tag_hash = hashlib.sha256(tag.encode()).digest()
-    return hashlib.sha256(tag_hash + tag_hash + msg).digest()
+def sha256(msg):
+    return hashlib.sha256(msg).digest()
 
 def is_infinity(P):
     return P is None
@@ -116,7 +115,7 @@ def schnorr_sign(msg, seckey):
         raise RuntimeError('Failure. This happens only with negligible probability.')
     R = point_mul(G, k0)
     k = n - k0 if not has_square_y(R) else k0
-    e = int_from_bytes(tagged_hash("BIPSchnorr", bytes_from_point(R) + bytes_from_point(P) + msg)) % n
+    e = int_from_bytes(sha256(bytes_from_int(x(R)) + bytes_from_point(P) + msg)) % n
     return bytes_from_int(x(R)) + bytes_from_int((k + e * seckey) % n)
 
 def schnorr_verify(msg, pubkey, sig):
@@ -133,7 +132,7 @@ def schnorr_verify(msg, pubkey, sig):
     s = int_from_bytes(sig[32:64])
     if (r >= p or s >= n):
         return False
-    e = int_from_bytes(tagged_hash("BIPSchnorr", sig[0:32] + pubkey + msg)) % n
+    e = int_from_bytes(sha256(sig[0:32] + pubkey + msg)) % n
     R = point_add(point_mul(G, s), point_mul(P, n - e))
     if R is None or not has_square_y(R) or x(R) != r:
         return False
