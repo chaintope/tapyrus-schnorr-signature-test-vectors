@@ -56,14 +56,14 @@ def bytes_from_point(P):
 def point_from_bytes(b):
     assert(len(b) == 33 and (b[0] == 3 or b[0] == 2))
     x = int_from_bytes(b[1:33])
-    odd = b[0]
+    odd = b[0] % 2
     if x >= p:
         return None
     y_sq = (pow(x, 3, p) + 7) % p
     y0 = pow(y_sq, (p + 1) // 4, p)
     if pow(y0, 2, p) != y_sq:
         return None
-    y = p - y0 if y0 % 2 == odd else y0
+    y = p - y0 if y0 % 2 != odd else y0
     return [x, y]
 
 def int_from_bytes(b):
