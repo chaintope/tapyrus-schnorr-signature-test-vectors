@@ -140,7 +140,6 @@ def schnorr_verify(msg, pubkey, sig):
 
 def generate_k(msg, seckey):
     while True:
-        print("generate_k", msg, seckey)
         ret = rfc6979(msg, seckey)
         if 0 < ret < n:
             return ret
@@ -155,10 +154,8 @@ def rfc6979(msg, x):
     keydata = x + msg + "SCHNORR + SHA256".encode()
     K = hmac.new(K, V + b'\x00' + keydata, hashlib.sha256).digest()
     V = hmac.new(K, V, hashlib.sha256).digest()
-    print("1", K.hex(), V.hex())
     K = hmac.new(K, V + b'\x01' + keydata, hashlib.sha256).digest()
     V = hmac.new(K, V, hashlib.sha256).digest()
-    print("2", K.hex(), V.hex())
     while True:
         t = b''
         while len(t) < 32:
