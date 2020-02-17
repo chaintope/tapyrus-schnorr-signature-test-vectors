@@ -1,5 +1,6 @@
 import hashlib
 import binascii
+import hmac
 
 p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
 n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
@@ -110,7 +111,7 @@ def schnorr_sign(msg, seckey):
     if not (1 <= seckey <= n - 1):
         raise ValueError('The secret key must be an integer in the range 1..n-1.')
     P = point_mul(G, seckey)
-    k0 = int_from_bytes(tagged_hash("BIPSchnorrDerive", bytes_from_int(seckey) + msg)) % n
+    k0 = generate_k(msg, bytes_from_int(seckey))
     if k0 == 0:
         raise RuntimeError('Failure. This happens only with negligible probability.')
     R = point_mul(G, k0)
@@ -137,6 +138,40 @@ def schnorr_verify(msg, pubkey, sig):
     if R is None or not has_square_y(R) or x(R) != r:
         return False
     return True
+
+def generate_k(msg, seckey):
+    while True:
+        print("generate_k", msg, seckey)
+        ret = rfc6979(msg, seckey)
+        if 0 < ret < n:
+            return ret
+
+'''
+   msg: 32 bytes hashed message
+   x:   private key
+'''
+def rfc6979(msg, x):
+    V = b'\x01' * 32
+    K = b'\x00' * 32
+    keydata = x + msg + "SCHNORR + SHA256".encode()
+    K = hmac.new(K, V + b'\x00' + keydata, hashlib.sha256).digest()
+    V = hmac.new(K, V, hashlib.sha256).digest()
+    print("1", K.hex(), V.hex())
+    K = hmac.new(K, V + b'\x01' + keydata, hashlib.sha256).digest()
+    V = hmac.new(K, V, hashlib.sha256).digest()
+    print("2", K.hex(), V.hex())
+    while True:
+        t = b''
+        while len(t) < 32:
+            V = hmac.new(K, V, hashlib.sha256).digest()
+            t += V
+
+        k = int_from_bytes(t)
+        if 1 <= k <= p - 1:
+            return k
+        else:
+            K = hmac.new(K, V + b'\x00', hashlib.sha256).digest()
+            V = hmac.new(K, V, hashlib.sha256).digest()
 
 #
 # The following code is only used to verify the test vectors.
