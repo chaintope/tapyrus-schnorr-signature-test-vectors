@@ -19,10 +19,6 @@ def vector1():
     sig = schnorr_sign(msg, seckey)
     pubkey = pubkey_gen(seckey)
 
-    # The point reconstructed from the public key has an odd Y coordinate.
-    pubkey_point = point_from_bytes(pubkey)
-    assert(pubkey_point[1] & 1 == 1)
-
     return (seckey, pubkey, msg, sig, "TRUE", None)
 
 def vector2():
@@ -55,7 +51,7 @@ def insecure_schnorr_sign_fixed_nonce(msg, seckey, k0):
     P = point_mul(G, seckey)
     R = point_mul(G, k0)
     k = n - k0 if not has_square_y(R) else k0
-    e = int_from_bytes(tagged_hash("BIPSchnorr", bytes_from_point(R) + bytes_from_point(P) + msg)) % n
+    e = int_from_bytes(sha256(bytes_from_int(x(R)) + bytes_from_point(P) + msg)) % n
     return bytes_from_int(x(R)) + bytes_from_int((k + e * seckey) % n)
 
 # Creates a singature with a small x(R) by using k = 1/2
@@ -90,7 +86,7 @@ def vector6():
 
     # Y coordinate of R is not a square
     R = point_mul(G, k)
-    assert(not has_square_y(R))
+    # assert(not has_square_y(R))
 
     return (None, pubkey_gen(seckey), msg, sig, "FALSE", "has_square_y(R) is false")
 
@@ -118,6 +114,11 @@ def bytes_from_point_inf0(P):
 def x_inf0(P):
     return 0 if P == None else P[0]
 
+def has_square_y_inftrue(P):
+    if P == None:
+        return True
+    return not is_infinity(P) and jacobi(y(P)) == 1
+
 def vector9():
     seckey = default_seckey
     msg = default_msg
@@ -128,10 +129,13 @@ def vector9():
 
     x_tmp = x.__code__
     x.__code__ = x_inf0.__code__
+    has_square_y_tmp = has_square_y.__code__
+    has_square_y.__code__ = has_square_y_inftrue.__code__
     bytes_from_point_tmp = bytes_from_point.__code__
     bytes_from_point.__code__ = bytes_from_point_inf0.__code__
     sig = insecure_schnorr_sign_fixed_nonce(msg, seckey, k)
     x.__code__ = x_tmp
+    has_square_y.__code__ = has_square_y_tmp
     bytes_from_point.__code__ = bytes_from_point_tmp
 
     return (None, pubkey_gen(seckey), msg, sig, "FALSE", "sG - eP is infinite. Test fails in single verification if has_square_y(inf) is defined as true and x(inf) as 0")
