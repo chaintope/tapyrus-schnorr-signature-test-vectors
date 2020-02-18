@@ -75,7 +75,7 @@ def is_square(x):
     return pow(x, (p - 1) // 2, p) == 1
 
 def has_square_y(P):
-    return not is_infinity(P) and is_square(y(P))
+    return not is_infinity(P) and jacobi(y(P)) == 1
 
 def jacobi(x):
     assert(x > 0)
