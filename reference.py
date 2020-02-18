@@ -83,7 +83,7 @@ def jacobi(x):
     t = 1
     while x != 0:
         while x % 2 == 0:
-            x /= 2
+            x //= 2
             r = n % 8
             if r == 3 or r == 5:
                 t = -t

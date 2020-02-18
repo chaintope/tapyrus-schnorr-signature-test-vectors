@@ -86,7 +86,7 @@ def vector6():
 
     # Y coordinate of R is not a square
     R = point_mul(G, k)
-    # assert(not has_square_y(R))
+    assert(not has_square_y(R))
 
     return (None, pubkey_gen(seckey), msg, sig, "FALSE", "has_square_y(R) is false")
 
