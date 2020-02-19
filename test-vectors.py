@@ -42,15 +42,14 @@ def vector3():
 # Signs with a given nonce. This can be INSECURE and is only INTENDED FOR
 # GENERATING TEST VECTORS. Results in an invalid signature if y(kG) is not
 # square.
-def insecure_schnorr_sign_fixed_nonce(msg, seckey, k0):
+def insecure_schnorr_sign_fixed_nonce(msg, seckey, k):
     if len(msg) != 32:
         raise ValueError('The message must be a 32-byte array.')
     seckey = int_from_bytes(seckey)
     if not (1 <= seckey <= n - 1):
         raise ValueError('The secret key must be an integer in the range 1..n-1.')
     P = point_mul(G, seckey)
-    R = point_mul(G, k0)
-    k = n - k0 if not has_square_y(R) else k0
+    R = point_mul(G, k)
     e = int_from_bytes(sha256(bytes_from_int(x(R)) + bytes_from_point(P) + msg)) % n
     return bytes_from_int(x(R)) + bytes_from_int((k + e * seckey) % n)
 
